@@ -47,6 +47,9 @@ function Access() {
     }
     
   }
+  function GoogleAutentication(){
+    
+  }
 
   if(newpage){
     return <Subject/>
@@ -74,7 +77,7 @@ function Access() {
     src="/images/googlesvg.svg" 
     alt="Google logo" 
     style={{ width: "20px", marginRight: "8px", verticalAlign: "middle" }} 
-  />
+   onClick={GoogleAutentication}/>
   Sign Up
 </button>
 </form>
