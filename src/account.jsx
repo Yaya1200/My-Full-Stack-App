@@ -18,15 +18,17 @@ function Access() {
       [inputname]: inputvalue
      }))
   }
-  useEffect(()=>{
-    const search = searchparams.get("success")
-    if(search === "true"){
-      setnewpage(true);
-    }
-    else{
-      setnewpage(false);
-    }
-  }, [searchparams]);
+  useEffect(() => {
+  axios.get("http://localhost:5000/auth/user", { withCredentials: true })
+    .then(res => {
+      if (res.data.loggedIn) {
+        setnewpage(true);
+      }
+    });
+}, []);
+
+
+ 
   async function inputaccount(k) {
     k.preventDefault();
     try{
@@ -60,6 +62,7 @@ function Access() {
   }
  async  function GoogleAutentication(){
   window.location.href = "http://localhost:5000/auth/google";
+  
 
   }
 
@@ -84,14 +87,6 @@ function Access() {
   Sign Up
 </button>
 
-<button className="login-using-google" type="button">
-  <img 
-    src="/images/googlesvg.svg" 
-    alt="Google logo" 
-    style={{ width: "20px", marginRight: "8px", verticalAlign: "middle" }} 
-   />
-  Sign Up
-</button>
 </form>
   </div>
   ): (

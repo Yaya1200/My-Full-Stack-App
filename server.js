@@ -75,8 +75,20 @@ passport.use("google", new GoogleStrategy({
   userProfileURL:"https://www.googleapis.com/oauth2/v3/userinfo",
 
 }, async(accessToken, refreshToken, profile, cb)=>{
-  console.log(profile)
- 
+  try{
+    const response = await account.query("SELECT * FROM myreactapp WHERE username = $1",[profile.email]);
+    if(response.rows.length === 0){
+      const newuser = await account.query("INSERT INTO myreactapp (username, password) VALUES ($1, $2)",[profile.email, "google"]);
+      cb(null, newuser.rows[0]);
+    }
+    else{
+      cb(null, response.rows[0]);
+    }
+
+  }
+  catch (err){
+  cb(err)
+  }
 
 
 }))
@@ -100,6 +112,14 @@ async function run() {
   }
 }
 run();
+app.get("/auth/user", (req, res) => {
+  if (req.user) {
+    res.json({ loggedIn: true, user: req.user });
+  } else {
+    res.json({ loggedIn: false });
+  }
+});
+
 
 
 app.get("/subject", (req, res) => {
@@ -109,13 +129,20 @@ app.get("/subject", (req, res) => {
 app.get("/auth/google", passport.authenticate("google", {
   scope: ["profile", "email"],
 }))
-app.get("/auth/google/callback",passport.authenticate("google", {
-  failureRedirect: "/login-faild", session: true
-}), (req,res)=>{
-  res.redirect("http://localhost:5173/login-result?success=true");
-})
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: "/login-failed",
+    session: true,
+  }),
+ (req, res) => {
+  res.redirect("http://localhost:5173/subject");
+}
+
+);
+
 app.get("/login-failed", (req, res) => {
-  res.redirect("http://localhost:5173/login-result?success=false");
+  res.json(false);
 });
 
 app.get("/api/data", async (req, res) => {
