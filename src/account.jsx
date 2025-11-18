@@ -1,13 +1,15 @@
 import "./account.css";
-import React,{useState} from "react";
+import React,{useEffect, useState} from "react";
 import Subject from "./subject";
 import axios from "axios";
+import { useSearchParams } from "react-router-dom";
 
 
 function Access() {
   const [value, setvalue] = useState({username:"", password:""})
   const [newpage, setnewpage] = useState(false);
   const [createaccount, setcreateaccount] = useState(false);
+  const [searchparams] = useSearchParams();
   function inputs(event){
      let inputname = event.target.name;
      let inputvalue = event.target.value;
@@ -16,6 +18,15 @@ function Access() {
       [inputname]: inputvalue
      }))
   }
+  useEffect(()=>{
+    const search = searchparams.get("success")
+    if(search === "true"){
+      setnewpage(true);
+    }
+    else{
+      setnewpage(false);
+    }
+  }, [searchparams]);
   async function inputaccount(k) {
     k.preventDefault();
     try{
@@ -48,8 +59,8 @@ function Access() {
     
   }
  async  function GoogleAutentication(){
-    const response = await axios.post("http://localhost:5000/auth/google");
-    response.data ? setnewpage(true) : alert("can't login try to use other methods to login")
+  window.location.href = "http://localhost:5000/auth/google";
+
   }
 
   if(newpage){
@@ -78,7 +89,7 @@ function Access() {
     src="/images/googlesvg.svg" 
     alt="Google logo" 
     style={{ width: "20px", marginRight: "8px", verticalAlign: "middle" }} 
-   onClick={GoogleAutentication}/>
+   />
   Sign Up
 </button>
 </form>
@@ -99,7 +110,7 @@ function Access() {
   Login
 </button>
 
-<button className="login-using-google" type="button">
+<button className="login-using-google" type="button" onClick={GoogleAutentication}>
   <img 
     src="/images/googlesvg.svg" 
     alt="Google logo" 

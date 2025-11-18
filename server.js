@@ -7,6 +7,7 @@ import env from "dotenv";
 import session from "express-session";
 import passport from "passport";
 import { Strategy } from "passport-local";
+import GoogleStrategy from "passport-google-oauth2";
 
 env.config();
 
@@ -44,8 +45,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 
-passport.use(
-  new Strategy(async (username, password, cb) => {
+passport.use("local", new Strategy(async (username, password, cb) => {
     try {
       const result = await account.query(
         "SELECT * FROM myreactapp WHERE username = $1",
@@ -68,6 +68,18 @@ passport.use(
     }
   })
 );
+passport.use("google", new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "http://localhost:5000/auth/google/callback",
+  userProfileURL:"https://www.googleapis.com/oauth2/v3/userinfo",
+
+}, async(accessToken, refreshToken, profile, cb)=>{
+  console.log(profile)
+ 
+
+
+}))
 
 passport.serializeUser((user, cb) => cb(null, user));
 passport.deserializeUser((user, cb) => cb(null, user));
@@ -94,6 +106,17 @@ app.get("/subject", (req, res) => {
   res.json(req.isAuthenticated());
 });
 
+app.get("/auth/google", passport.authenticate("google", {
+  scope: ["profile", "email"],
+}))
+app.get("/auth/google/callback",passport.authenticate("google", {
+  failureRedirect: "/login-faild", session: true
+}), (req,res)=>{
+  res.redirect("http://localhost:5173/login-result?success=true");
+})
+app.get("/login-failed", (req, res) => {
+  res.redirect("http://localhost:5173/login-result?success=false");
+});
 
 app.get("/api/data", async (req, res) => {
   try {
