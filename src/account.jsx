@@ -47,8 +47,9 @@ function Access() {
     }
     
   }
-  function GoogleAutentication(){
-    
+ async  function GoogleAutentication(){
+    const response = await axios.post("http://localhost:5000/auth/google");
+    response.data ? setnewpage(true) : alert("can't login try to use other methods to login")
   }
 
   if(newpage){
