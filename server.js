@@ -14,7 +14,7 @@ dotenv.config();
 
 const app = express();
 const Port = 5000;
-const mongoClient = new MongoClient(process.env.MONGO_URI);
+const mongoClient = new MongoClient(process.env.MONGODB_URI);
 let collection;
 
 
@@ -35,7 +35,7 @@ app.use(cors({
 }))
 
 app.use(express.json());
-app.use(cors());
+
 
 app.use(
   session({
@@ -77,7 +77,7 @@ passport.use("local", new Strategy(async (username, password, cb) => {
 passport.use("google", new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "http://localhost:5000/auth/google/callback",
+  callbackURL:process.env.BACKEND_URL + "/auth/google/callback",
   userProfileURL:"https://www.googleapis.com/oauth2/v3/userinfo",
 
 }, async(accessToken, refreshToken, profile, cb)=>{
@@ -142,7 +142,7 @@ app.get(
     session: true,
   }),
  (req, res) => {
-  res.redirect("http://localhost:5173/subject");
+  res.redirect(process.env.FRONTEND_URL + "/subject");
 }
 
 );
