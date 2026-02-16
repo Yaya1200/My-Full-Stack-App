@@ -11,7 +11,7 @@ function Subject() {
   const [inputs, setinputs] = useState({ title: "", subject: "", content: "" });
   const [arrayinput, setarrayinput] = useState([]);
   const [isexpanded, setisexpanded] = useState(false);
-
+    
   function setinputvalues(event) {
     const { name, value } = event.target;
     setinputs((pre) => ({ ...pre, [name]: value }));
@@ -20,7 +20,7 @@ function Subject() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await axios.get("http://localhost:5000/api/data");
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/data`);
         setarrayinput(response.data);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -31,8 +31,8 @@ function Subject() {
 
   async function addarray() {
     try {
-      await axios.post("http://localhost:5000/api/data", inputs);
-      const response = await axios.get("http://localhost:5000/api/data");
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/data`, inputs);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/data`);
       setarrayinput(response.data);
       setinputs({ title: "", subject: "", content: "" });
     } catch (error) {
@@ -42,8 +42,8 @@ function Subject() {
 
   async function deleteitems(id1) {
     try {
-      await axios.delete(`http://localhost:5000/api/data/${id1}`);
-      const response = await axios.get("http://localhost:5000/api/data");
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/data/${id1}`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/data`);
       setarrayinput(response.data);
     } catch (error) {
       console.error("Error deleting:", error);
