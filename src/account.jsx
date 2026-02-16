@@ -19,7 +19,7 @@ function Access() {
      }))
   }
   useEffect(() => {
-  axios.get("http://localhost:5000/auth/user", { withCredentials: true })
+  axios.get(`${import.meta.env.VITE_API_URL}/auth/user`, { withCredentials: true })
     .then(res => {
       if (res.data.loggedIn) {
         setnewpage(true);
@@ -32,7 +32,7 @@ function Access() {
   async function inputaccount(k) {
     k.preventDefault();
     try{
-    const response = await axios.post("http://localhost:5000/api/input/account", value);
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/input/account`, value);
        setcreateaccount(false);
        setvalue({
         username: "",
@@ -48,7 +48,7 @@ function Access() {
   async function checkaccount(k) {
     k.preventDefault();
     try{
-      const response = await axios.post("http://localhost:5000/api/create/account", value);
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/create/account`, value);
       response.data ? setnewpage(true): alert("incorrect password or username");
       setvalue({
         username: "",
@@ -61,7 +61,7 @@ function Access() {
     
   }
  async  function GoogleAutentication(){
-  window.location.href = "http://localhost:5000/auth/google";
+  window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
   
 
   }
