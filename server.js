@@ -3,20 +3,20 @@ import { MongoClient, ObjectId } from "mongodb";
 import pg from "pg";
 import cors from "cors";
 import bcrypt from "bcrypt";
-import env from "dotenv";
+import dotenv from "dotenv";
 import session from "express-session";
 import passport from "passport";
 import { Strategy } from "passport-local";
 import GoogleStrategy from "passport-google-oauth2";
+import cors from "cors";
 
-env.config();
+dotenv.config();
 
 const app = express();
 const Port = 5000;
-
-
-const mongoClient = new MongoClient("mongodb://localhost:27017");
+const mongoClient = new MongoClient(process.env.MONGO_URI);
 let collection;
+
 
 
 const account = new pg.Client({
@@ -29,6 +29,10 @@ const account = new pg.Client({
 });
 account.connect();
 
+app.use(cors({
+  origin: process.env.FRONTEND_URL||"http://localhost:5173",
+  credentials:true
+}))
 
 app.use(express.json());
 app.use(cors());
@@ -41,6 +45,7 @@ app.use(
     cookie: { maxAge: 1000 * 60 * 60 * 24 },
   })
 );
+
 
 app.use(passport.initialize());
 app.use(passport.session());
