@@ -13,7 +13,7 @@ import GoogleStrategy from "passport-google-oauth2";
 dotenv.config();
 
 const app = express();
-const Port = 5000;
+const Port = process.env.PORT || 5000;
 const mongoClient = new MongoClient(process.env.MONGODB_URI);
 let collection;
 
@@ -26,7 +26,7 @@ const account = new pg.Client({
 account.connect();
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL||"http://localhost:5173",
+  origin: process.env.FRONTEND_URL,
   credentials:true
 }))
 
