@@ -4,35 +4,52 @@ import { useNavigate } from "react-router-dom";
 import NoteCard from "./list";
 
 function Subject() {
-  const [note, setNote] = useState({ title: "", subject: "", content: "" });
+  const [note, setNote] = useState({
+    title: "",
+    subject: "",
+    content: "",
+  });
+
   const [notes, setNotes] = useState([]);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  /* =========================
+     LOAD NOTES
+  ========================= */
   useEffect(() => {
-    async function loadNotes() {
+    const loadNotes = async () => {
       try {
-        const response = await axios.get(`${apiUrl}/api/notes`, { withCredentials: true });
-        setNotes(response.data);
+        const res = await axios.get("/api/notes", { withCredentials: true });
+
+        setNotes(res.data);
       } catch (err) {
+        console.log("Load notes error:", err.response?.status);
+
         if (err.response?.status === 401) {
           navigate("/");
         } else {
           setError("Unable to load notes");
         }
       }
-    }
+    };
 
     loadNotes();
   }, [navigate]);
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
+  /* =========================
+     INPUT HANDLER
+  ========================= */
+  const handleChange = (e) => {
+    const { name, value } = e.target;
     setNote((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = async (event) => {
-    event.preventDefault();
+  /* =========================
+     SAVE NOTE
+  ========================= */
+  const handleSave = async (e) => {
+    e.preventDefault();
     setError("");
 
     if (!note.subject || !note.title || !note.content) {
@@ -41,26 +58,42 @@ function Subject() {
     }
 
     try {
-      const response = await axios.post(`${apiUrl}/api/notes`, note, { withCredentials: true });
-      setNotes((prev) => [response.data, ...prev]);
+      const res = await axios.post("/api/notes", note, { withCredentials: true });
+
+      setNotes((prev) => [res.data, ...prev]);
       setNote({ title: "", subject: "", content: "" });
     } catch (err) {
+      console.log("Save error:", err.response?.status);
       setError(err.response?.data?.error || "Unable to save note.");
     }
   };
 
+  /* =========================
+     DELETE NOTE
+  ========================= */
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${apiUrl}/api/notes/${id}`, { withCredentials: true });
-      setNotes((prev) => prev.filter((item) => item._id !== id));
+      await axios.delete(`/api/notes/${id}`, { withCredentials: true });
+
+      setNotes((prev) =>
+        prev.filter((n) => n._id !== id)
+      );
     } catch (err) {
       setError("Unable to delete note.");
     }
   };
 
+  /* =========================
+     LOGOUT
+  ========================= */
   const handleLogout = async () => {
-    await axios.post(`${apiUrl}/api/auth/logout`, {}, { withCredentials: true });
-    navigate("/");
+    try {
+      await axios.post("/api/auth/logout", {}, { withCredentials: true });
+
+      navigate("/");
+    } catch (err) {
+      console.log("Logout error:", err);
+    }
   };
 
   return (
@@ -68,50 +101,68 @@ function Subject() {
       <header className="subject-header">
         <div>
           <h1>Smart Study Notes</h1>
-          <p>Capture your subjects, titles, and ideas in one place.</p>
+          <p>Capture your ideas in one place.</p>
         </div>
-        <button className="secondary-button" onClick={handleLogout}>
+
+        <button
+          className="secondary-button"
+          onClick={handleLogout}
+        >
           Logout
         </button>
       </header>
 
+      {/* CREATE NOTE */}
       <section className="note-form-card">
         <h2>Create a note</h2>
 
         <form onSubmit={handleSave} className="note-form">
           <input
             name="subject"
-            type="text"
             placeholder="Subject"
             value={note.subject}
             onChange={handleChange}
           />
+
           <input
             name="title"
-            type="text"
             placeholder="Title"
             value={note.title}
             onChange={handleChange}
           />
+
           <textarea
             name="content"
             placeholder="Content"
             value={note.content}
             onChange={handleChange}
           />
-          {error && <div className="form-error">{error}</div>}
+
+          {error && (
+            <div className="form-error">
+              {error}
+            </div>
+          )}
+
           <button type="submit" className="primary-button">
-            Save note
+            Save Note
           </button>
         </form>
       </section>
 
+      {/* NOTES LIST */}
       <section className="notes-grid">
         {notes.length === 0 ? (
-          <div className="empty-state">No notes yet. Add your first note.</div>
+          <div className="empty-state">
+            No notes yet. Create your first one.
+          </div>
         ) : (
-          notes.map((item) => (
-            <NoteCard key={item._id} note={item} onDelete={() => handleDelete(item._id)} />
+          notes.map((note) => (
+            <NoteCard
+              key={note._id}
+              note={note}
+              onDelete={() => handleDelete(note._id)}
+            />
           ))
         )}
       </section>
