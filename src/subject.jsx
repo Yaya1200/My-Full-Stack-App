@@ -1,135 +1,121 @@
 import React, { useState, useEffect } from "react";
-import 'bootstrap/dist/css/bootstrap.min.css';
-import './subject.css';
-import List1 from "./list";
-import AddIcon from '@mui/icons-material/Add';
-import Zoom from '@mui/material/Zoom';
-import HighlightIcon from '@mui/icons-material/Highlight';
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import NoteCard from "./list";
 
 function Subject() {
-  const [inputs, setinputs] = useState({ title: "", subject: "", content: "" });
-  const [arrayinput, setarrayinput] = useState([]);
-  const [isexpanded, setisexpanded] = useState(false);
-    
-  function setinputvalues(event) {
-    const { name, value } = event.target;
-    setinputs((pre) => ({ ...pre, [name]: value }));
-  }
+  const [note, setNote] = useState({ title: "", subject: "", content: "" });
+  const [notes, setNotes] = useState([]);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchData() {
+    async function loadNotes() {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/data`);
-        setarrayinput(response.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
+        const response = await axios.get(`${apiUrl}/api/notes`, { withCredentials: true });
+        setNotes(response.data);
+      } catch (err) {
+        if (err.response?.status === 401) {
+          navigate("/");
+        } else {
+          setError("Unable to load notes");
+        }
       }
     }
-    fetchData();
-  }, []);
 
-  async function addarray() {
-    try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/data`, inputs);
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/data`);
-      setarrayinput(response.data);
-      setinputs({ title: "", subject: "", content: "" });
-    } catch (error) {
-      console.error("Error", error);
+    loadNotes();
+  }, [navigate]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setNote((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async (event) => {
+    event.preventDefault();
+    setError("");
+
+    if (!note.subject || !note.title || !note.content) {
+      setError("Please fill in all fields.");
+      return;
     }
-  }
 
-  async function deleteitems(id1) {
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/api/data/${id1}`);
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/data`);
-      setarrayinput(response.data);
-    } catch (error) {
-      console.error("Error deleting:", error);
+      const response = await axios.post(`${apiUrl}/api/notes`, note, { withCredentials: true });
+      setNotes((prev) => [response.data, ...prev]);
+      setNote({ title: "", subject: "", content: "" });
+    } catch (err) {
+      setError(err.response?.data?.error || "Unable to save note.");
     }
-  }
+  };
 
-  function expanded() {
-    setisexpanded(true);
-  }
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`${apiUrl}/api/notes/${id}`, { withCredentials: true });
+      setNotes((prev) => prev.filter((item) => item._id !== id));
+    } catch (err) {
+      setError("Unable to delete note.");
+    }
+  };
+
+  const handleLogout = async () => {
+    await axios.post(`${apiUrl}/api/auth/logout`, {}, { withCredentials: true });
+    navigate("/");
+  };
 
   return (
-    <div className="p-3 mb-2 min-vh-100 bg-warning-subtle text-warning-emphasis">
-      <div className="col-md-10">
-        <div className="font-monospace mb-3" style={{ width: '6rem' }}>
-          <HighlightIcon /> notes
+    <main className="subject-page">
+      <header className="subject-header">
+        <div>
+          <h1>Smart Study Notes</h1>
+          <p>Capture your subjects, titles, and ideas in one place.</p>
         </div>
+        <button className="secondary-button" onClick={handleLogout}>
+          Logout
+        </button>
+      </header>
 
-        <div className="col-12 col-md-6">
-          <div className="form-floating mb-3">
-            <input
-              type="text"
-              className="form-control"
-              id="subjectInput"
-              placeholder="Subject"
-              name="subject"
-              value={inputs.subject}
-              onChange={setinputvalues}
-              onClick={expanded}
-            />
-            <label htmlFor="subjectInput">Subject</label>
-          </div>
+      <section className="note-form-card">
+        <h2>Create a note</h2>
 
-          {isexpanded && (
-            <>
-              <div className="form-floating mb-3">
-                <input
-                  type="text"
-                  className="form-control"
-                  id="titleInput"
-                  placeholder="Title"
-                  name="title"
-                  value={inputs.title}
-                  onChange={setinputvalues}
-                />
-                <label htmlFor="titleInput">Title</label>
-              </div>
-
-              <div className="form-floating mb-3">
-                <textarea
-                  className="form-control"
-                  placeholder="Content"
-                  id="contentInput"
-                  style={{ height: '100px' }}
-                  name="content"
-                  value={inputs.content}
-                  onChange={setinputvalues}
-                ></textarea>
-                <label htmlFor="contentInput">Content</label>
-              </div>
-
-              <Zoom in={isexpanded}>
-                <button
-                  onClick={addarray}
-                  type="button"
-                  className="btn btn-outline-info d-block ms-auto">
-                  <AddIcon />
-                </button>
-              </Zoom>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-        {arrayinput.map((values) => (
-          <List1
-            key={values._id}
-            id1={values._id}
-            title={values.title}
-            subject={values.subject}
-            content={values.content}
-            ondelete={() => deleteitems(values._id)}
+        <form onSubmit={handleSave} className="note-form">
+          <input
+            name="subject"
+            type="text"
+            placeholder="Subject"
+            value={note.subject}
+            onChange={handleChange}
           />
-        ))}
-      </div>
-    </div>
+          <input
+            name="title"
+            type="text"
+            placeholder="Title"
+            value={note.title}
+            onChange={handleChange}
+          />
+          <textarea
+            name="content"
+            placeholder="Content"
+            value={note.content}
+            onChange={handleChange}
+          />
+          {error && <div className="form-error">{error}</div>}
+          <button type="submit" className="primary-button">
+            Save note
+          </button>
+        </form>
+      </section>
+
+      <section className="notes-grid">
+        {notes.length === 0 ? (
+          <div className="empty-state">No notes yet. Add your first note.</div>
+        ) : (
+          notes.map((item) => (
+            <NoteCard key={item._id} note={item} onDelete={() => handleDelete(item._id)} />
+          ))
+        )}
+      </section>
+    </main>
   );
 }
 

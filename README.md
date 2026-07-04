@@ -1,12 +1,48 @@
-# React + Vite
+# Smart Study Notes
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack note-taking application built with React, Vite, Express, Passport, and MongoDB.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- User signup and login
+- Secure password hashing with bcrypt
+- Session-based authentication
+- Create, list, and delete notes
+- Clean responsive UI with modern styling
 
-## Expanding the ESLint configuration
+## Setup
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Copy `.env.example` or create a `.env` file
+2. Set values for `MONGODB_URI`, `FRONTEND_URL`, `SESSION_SECRET`, and optionally `MONGODB_DB`
+3. Install dependencies:
+
+```bash
+npm install
+```
+
+4. Start the frontend dev server:
+
+```bash
+npm run dev
+```
+
+5. Start the backend server:
+
+```bash
+npm start
+```
+
+## Important Endpoints
+
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/user`
+- `GET /api/notes`
+- `POST /api/notes`
+- `DELETE /api/notes/:id`
+
+## Notes
+
+- Frontend expects `VITE_API_URL` to point to the backend URL.
+- Backend uses sessions and must allow credentials from the frontend.

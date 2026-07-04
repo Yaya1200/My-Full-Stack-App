@@ -1,125 +1,96 @@
-import "./account.css";
-import React,{useEffect, useState} from "react";
-import Subject from "./subject";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useSearchParams } from "react-router-dom";
-
+import { useNavigate } from "react-router-dom";
 
 function Access() {
-  const [value, setvalue] = useState({username:"", password:""})
-  const [newpage, setnewpage] = useState(false);
-  const [createaccount, setcreateaccount] = useState(false);
-  const [searchparams] = useSearchParams();
-  function inputs(event){
-     let inputname = event.target.name;
-     let inputvalue = event.target.value;
-     setvalue(prevalue=>({
-      ...prevalue, 
-      [inputname]: inputvalue
-     }))
-  }
+  const navigate = useNavigate();
+  const [authMode, setAuthMode] = useState("login");
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [error, setError] = useState("");
+
   useEffect(() => {
-  axios.get(`${import.meta.env.VITE_API_URL}/auth/user`, { withCredentials: true })
-    .then(res => {
-      if (res.data.loggedIn) {
-        setnewpage(true);
+    axios
+      .get(`${apiUrl}/api/auth/user`, { withCredentials: true })
+      .then((res) => {
+        if (res.data.loggedIn) {
+          navigate("/subject");
+        }
+      })
+      .catch(() => {});
+  }, [navigate]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+
+    try {
+      const route = authMode === "signup" ? "/api/auth/signup" : "/api/auth/login";
+      const response = await axios.post(`${apiUrl}${route}`, form, {
+        withCredentials: true,
+      });
+
+      if (response.data.loggedIn) {
+        navigate("/subject");
+      } else {
+        setError(response.data.error || "Authentication failed");
       }
-    });
-}, []);
-
-
- 
-  async function inputaccount(k) {
-    k.preventDefault();
-    try{
-    const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/input/account`, value);
-       setcreateaccount(false);
-       setvalue({
-        username: "",
-        password: ""
-       })
-       alert(response.data);
+    } catch (err) {
+      setError(err.response?.data?.error || "Server error");
     }
-    catch(error){
-      console.error("error", error);
-    }
-    
-  }
-  async function checkaccount(k) {
-    k.preventDefault();
-    try{
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/create/account`, value);
-      response.data ? setnewpage(true): alert("incorrect password or username");
-      setvalue({
-        username: "",
-        password: ""
-       })
-    }
-    catch(error){
-      console.error("error", error);
-    }
-    
-  }
- async  function GoogleAutentication(){
-  window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`;
-  
+  };
 
-  }
+  return (
+    <main className="auth-page">
+      <section className="auth-card">
+        <h1>Smart Study</h1>
+        <p>{authMode === "signup" ? "Create your account" : "Login to your notes"}</p>
 
-  if(newpage){
-    return <Subject/>
-  }
-  function createaccount1(){
-    setcreateaccount(true);
-  }
+        <form onSubmit={handleSubmit} className="auth-form">
+          <label>
+            Username
+            <input
+              name="username"
+              type="text"
+              value={form.username}
+              onChange={handleChange}
+              required
+              autoComplete="username"
+            />
+          </label>
 
- return createaccount ? (
-    <div>
-    <h1 style={{textAlign:"center", position: "relative"}}>smart study</h1>
-   <form className="form-container" onSubmit={inputaccount}>
-    <h1>Create Account</h1>
-    <input type="text" name="username" onChange={inputs} placeholder="username" value = {value.username}/>
-    <br />
-    <input type="password" name="password" onChange={inputs} placeholder="password" value = {value.password}/>
-    <br />
-  
-    <button className="login-using-password" type="submit" onClick={inputaccount}>
-  Sign Up
-</button>
+          <label>
+            Password
+            <input
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              required
+              autoComplete={authMode === "signup" ? "new-password" : "current-password"}
+              minLength={6}
+            />
+          </label>
 
-</form>
-  </div>
-  ): (
-    
+          {error && <div className="form-error">{error}</div>}
 
-    <div>
-    <h1 style={{textAlign:"center", position: "relative"}}>smart study</h1>
-   <form className="form-container" onSubmit={checkaccount}>
-    <h1>Login Now </h1>
-    <input type="text" name="username" onChange={inputs} placeholder="username" value = {value.username}/>
-    <br />
-    <input type="password" name="password" onChange={inputs} placeholder="password" value = {value.password}/>
-    <br />
-  
-    <button className="login-using-password" type="submit" onClick={checkaccount}>
-  Login
-</button>
+          <button type="submit" className="primary-button">
+            {authMode === "signup" ? "Sign Up" : "Login"}
+          </button>
+        </form>
 
-<button className="login-using-google" type="button" onClick={GoogleAutentication}>
-  <img 
-    src="/images/googlesvg.svg" 
-    alt="Google logo" 
-    style={{ width: "20px", marginRight: "8px", verticalAlign: "middle" }} 
-  />
-  Login 
-</button>
-
-
-  <button className="create-account" onClick={createaccount1}>Create Account</button>
-
-   
-  
-  </form>
-  </div>)};
+        <div className="auth-footer">
+          <button type="button" className="text-button" onClick={() => setAuthMode(authMode === "signup" ? "login" : "signup")}> 
+            {authMode === "signup" ? "Already have an account? Login" : "Create a new account"}
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+}
 
 export default Access;

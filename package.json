@@ -1,20 +1,9 @@
 {
-  "name": "my-react-app",
-  "version": "0.0.0",
+  "name": "my-full-stack-app",
+  "version": "1.0.0",
   "private": true,
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
-  "homepage": "https://github.com/Yaya1200/My-React-App#readme",
-  "bugs": {
-    "url": "https://github.com/Yaya1200/My-React-App/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Yaya1200/My-React-App.git"
-  },
-  "license": "ISC",
-  "author": "",
+  "description": "A full stack note-taking app built with React, Vite, Express, and MongoDB.",
   "type": "module",
-  "main": "eslint.config.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -23,22 +12,15 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.3.1",
-    "@mui/material": "^7.3.1",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
-    "bootstrap": "^5.3.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
     "mongodb": "^7.0.0",
     "passport": "^0.7.0",
-    "passport-google-oauth2": "^0.2.0",
     "passport-local": "^1.0.0",
-    "pg": "^8.18.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.8.1"

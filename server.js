@@ -1,226 +1,263 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
-import { MongoClient, ObjectId } from "mongodb";
-import pg from "pg";
 import cors from "cors";
-import bcrypt from "bcrypt";
-import dotenv from "dotenv";
 import session from "express-session";
 import passport from "passport";
-import { Strategy } from "passport-local";
-import GoogleStrategy from "passport-google-oauth2";
-
+import { Strategy as LocalStrategy } from "passport-local";
+import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+import { MongoClient, ObjectId } from "mongodb";
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
-const Port = process.env.PORT || 5000;
-const mongoClient = new MongoClient(process.env.MONGODB_URI);
-let collection;
+const PORT = process.env.PORT || 5000;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017";
+const MONGODB_DB = process.env.MONGODB_DB || "smart-study";
+const SESSION_SECRET = process.env.SESSION_SECRET || "change-me";
+const isProduction = process.env.NODE_ENV === "production";
+const allowedOrigins = [FRONTEND_URL, "http://127.0.0.1:5173"];
 
-
-
-const account = new pg.Client({
- connectionString: process.env.PG_URI,
-  ssl: { rejectUnauthorized: false },
-});
-account.connect();
-
-app.use(cors({
-  origin: process.env.FRONTEND_URL,
-  credentials:true
-}))
-
-app.use(express.json());
-
+const mongoClient = new MongoClient(MONGODB_URI);
+let users;
+let notes;
 
 app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+app.use(express.json());
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
+app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 },
+    proxy: isProduction,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24,
+      sameSite: "none",
+      secure: isProduction,
+      httpOnly: true,
+      path: "/",
+    },
   })
 );
-
-
 app.use(passport.initialize());
 app.use(passport.session());
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.originalUrl}`);
+  next();
+});
 
-
-passport.use("local", new Strategy(async (username, password, cb) => {
-    try {
-      const result = await account.query(
-        "SELECT * FROM myreactapp WHERE username = $1",
-        [username]
-      );
-
-      if (result.rows.length === 0) {
-        return cb(null, false);
+passport.use(
+  new LocalStrategy(
+    { usernameField: "username", passwordField: "password" },
+    async (username, password, done) => {
+      try {
+        console.log("LocalStrategy lookup", { username });
+        if (!users) {
+          throw new Error("Mongo users collection not initialized");
+        }
+        const user = await users.findOne({ username });
+        if (!user) {
+          console.log("LocalStrategy no user found", { username });
+          return done(null, false);
+        }
+        const matched = await bcrypt.compare(password, user.password);
+        if (!matched) {
+          console.log("LocalStrategy invalid password", { username });
+          return done(null, false);
+        }
+        return done(null, user);
+      } catch (err) {
+        console.error("LocalStrategy error", err);
+        return done(err);
       }
-
-      const user = result.rows[0];
-
-      bcrypt.compare(password, user.password, (err, same) => {
-        if (err) return cb(err);
-        if (!same) return cb(null, false);
-        return cb(null, user);
-      });
-    } catch (err) {
-      return cb(err);
     }
-  })
-);
-passport.use("google", new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL:process.env.BACKEND_URL + "/auth/google/callback",
-  userProfileURL:"https://www.googleapis.com/oauth2/v3/userinfo",
-
-}, async(accessToken, refreshToken, profile, cb)=>{
-  try{
-    const response = await account.query("SELECT * FROM myreactapp WHERE username = $1",[profile.email]);
-    if(response.rows.length === 0){
-      const newuser = await account.query("INSERT INTO myreactapp (username, password) VALUES ($1, $2)",[profile.email, "google"]);
-      cb(null, newuser.rows[0]);
-    }
-    else{
-      cb(null, response.rows[0]);
-    }
-
-  }
-  catch (err){
-  cb(err)
-  }
-
-
-}))
-
-passport.serializeUser((user, cb) => cb(null, user));
-passport.deserializeUser((user, cb) => cb(null, user));
-
-
-
-async function run() {
-  try {
-    await mongoClient.connect();
-    const db = mongoClient.db("mydatabase");
-    collection = db.collection("mycollection");
-
-    app.listen(Port, () =>
-      console.log(`Server running on http://localhost:${Port}`)
-    );
-  } catch (err) {
-    console.error("DB Connection Error:", err);
-  }
-}
-run();
-app.get("/auth/user", (req, res) => {
-  if (req.user) {
-    res.json({ loggedIn: true, user: req.user });
-  } else {
-    res.json({ loggedIn: false });
-  }
-});
-
-
-
-app.get("/subject", (req, res) => {
-  res.json(req.isAuthenticated());
-});
-
-app.get("/auth/google", passport.authenticate("google", {
-  scope: ["profile", "email"],
-}))
-app.get(
-  "/auth/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/login-failed",
-    session: true,
-  }),
- (req, res) => {
-  res.redirect(process.env.FRONTEND_URL + "/subject");
-}
-
+  )
 );
 
-app.get("/login-failed", (req, res) => {
-  res.json(false);
+passport.serializeUser((user, done) => {
+  done(null, user._id.toString());
 });
 
-app.get("/api/data", async (req, res) => {
+passport.deserializeUser(async (id, done) => {
   try {
-    const response = await collection.find({}).toArray();
-    res.json(response);
+    const user = await users.findOne({ _id: new ObjectId(id) });
+    done(null, user);
   } catch (err) {
-    console.error("Error fetching data:", err);
-    res.status(500).json({ error: "Server error" });
+    done(err);
   }
 });
 
-
-app.post("/api/data", async (req, res) => {
-  try {
-    const { title, subject, content } = req.body;
-    await collection.insertOne({ title, subject, content });
-    res.status(201).json({ message: "Data added successfully" });
-  } catch (error) {
-    console.error("Error adding data:", error);
-    res.status(500).json({ error: "Server error" });
+const requireAuth = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next();
   }
-});
+  res.status(401).json({ error: "Unauthorized" });
+};
 
-
-app.post("/api/input/account", async (req, res) => {
+app.post("/api/auth/signup", async (req, res) => {
   const { username, password } = req.body;
-
+  if (!username || !password) {
+    return res.status(400).json({ error: "Username and password are required" });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: "Password must be at least 6 characters" });
+  }
   try {
-    const result = await account.query(
-      "SELECT * FROM myreactapp WHERE username = $1",
-      [username]
-    );
-
-    if (result.rows.length > 0) {
-      return res.json("Username already exists");
+    const existingUser = await users.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ error: "Username already taken" });
     }
-
-    const hashed = await bcrypt.hash(password, 10);
-
-    const insert = await account.query(
-      "INSERT INTO myreactapp (username, password) VALUES ($1, $2) RETURNING *",
-      [username, hashed]
-    );
-
-    const user = insert.rows[0];
-
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await users.insertOne({
+      username,
+      password: hashedPassword,
+      createdAt: new Date(),
+    });
+    const user = await users.findOne({ _id: result.insertedId });
     req.login(user, (err) => {
-      if (err) return res.json(false);
-      res.json("the user is saved");
+      if (err) {
+        return res.status(500).json({ error: "Signup failed" });
+      }
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          return res.status(500).json({ error: "Signup session save failed" });
+        }
+        res.json({ loggedIn: true, user: { username: user.username } });
+      });
     });
   } catch (err) {
     console.error("Signup error:", err);
-    res.status(500).json("Server error");
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-
-app.post("/api/create/account", (req, res, next) => {
+app.post("/api/auth/login", (req, res, next) => {
   passport.authenticate("local", (err, user) => {
-    if (err || !user) return res.json(false);
-
+    if (err) {
+      return res.status(500).json({ error: "Server error" });
+    }
+    if (!user) {
+      return res.status(401).json({ loggedIn: false, error: "Invalid username or password" });
+    }
     req.login(user, (err) => {
-      if (err) return res.json(false);
-      return res.json(true);
+      if (err) {
+        return res.status(500).json({ error: "Login failed" });
+      }
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          return res.status(500).json({ error: "Login session save failed" });
+        }
+        res.json({ loggedIn: true, user: { username: user.username } });
+      });
     });
   })(req, res, next);
 });
 
+app.post("/api/auth/logout", (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      return res.status(500).json({ error: "Logout failed" });
+    }
+    res.json({ success: true });
+  });
+});
 
-app.delete("/api/data/:id", async (req, res) => {
+app.get("/api/auth/user", (req, res) => {
+  res.json({
+    loggedIn: req.isAuthenticated(),
+    user: req.user ? { username: req.user.username } : null,
+  });
+});
+
+app.get("/api/notes", requireAuth, async (req, res) => {
   try {
-    await collection.deleteOne({ _id: new ObjectId(req.params.id) });
-    res.json({ message: "Deleted successfully" });
+    const userNotes = await notes.find({ userId: req.user._id }).sort({ createdAt: -1 }).toArray();
+    res.json(userNotes);
   } catch (err) {
-    console.error("Delete Error:", err);
+    console.error("Error fetching notes:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
+
+app.post("/api/notes", requireAuth, async (req, res) => {
+  const { title, subject, content } = req.body;
+  if (!title || !subject || !content) {
+    return res.status(400).json({ error: "Title, subject, and content are required" });
+  }
+  try {
+    const note = {
+      userId: req.user._id,
+      title,
+      subject,
+      content,
+      createdAt: new Date(),
+    };
+    const result = await notes.insertOne(note);
+    res.status(201).json({ ...note, _id: result.insertedId.toString() });
+  } catch (err) {
+    console.error("Error creating note:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.delete("/api/notes/:id", requireAuth, async (req, res) => {
+  try {
+    const noteId = new ObjectId(req.params.id);
+    const result = await notes.deleteOne({ _id: noteId, userId: req.user._id });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting note:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(err.status || 500).json({ error: err.message || "Server error" });
+});
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "dist")));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+  });
+}
+
+async function start() {
+  try {
+    await mongoClient.connect();
+    const database = mongoClient.db(MONGODB_DB);
+    users = database.collection("users");
+    notes = database.collection("notes");
+    await users.createIndex({ username: 1 }, { unique: true });
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error("Startup error:", err);
+  }
+}
+
+start();
