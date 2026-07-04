@@ -1,11 +1,33 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Access() {
   const navigate = useNavigate();
 
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+  });
+
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!form.username || !form.password) {
+      setError("Please fill all fields");
+      return;
+    }
+
+    setError("");
     navigate("/subject");
   };
 
