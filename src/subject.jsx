@@ -20,17 +20,12 @@ function Subject() {
   useEffect(() => {
     const loadNotes = async () => {
       try {
-        const res = await axios.get("/api/notes", { withCredentials: true });
+        const res = await axios.get("/api/notes");
 
         setNotes(res.data);
       } catch (err) {
-        console.log("Load notes error:", err.response?.status);
-
-        if (err.response?.status === 401) {
-          navigate("/");
-        } else {
-          setError("Unable to load notes");
-        }
+        console.log("Load notes error:", err);
+        setError("Unable to load notes");
       }
     };
 
@@ -58,7 +53,7 @@ function Subject() {
     }
 
     try {
-      const res = await axios.post("/api/notes", note, { withCredentials: true });
+      const res = await axios.post("/api/notes", note);
 
       setNotes((prev) => [res.data, ...prev]);
       setNote({ title: "", subject: "", content: "" });
@@ -73,7 +68,7 @@ function Subject() {
   ========================= */
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`/api/notes/${id}`, { withCredentials: true });
+      await axios.delete(`/api/notes/${id}`);
 
       setNotes((prev) =>
         prev.filter((n) => n._id !== id)
@@ -88,7 +83,7 @@ function Subject() {
   ========================= */
   const handleLogout = async () => {
     try {
-      await axios.post("/api/auth/logout", {}, { withCredentials: true });
+      await axios.post("/api/auth/logout", {});
 
       navigate("/");
     } catch (err) {
